@@ -9,39 +9,13 @@ import { TextInput } from "@astryxdesign/core/TextInput";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
-interface SiteOption {
-  id: string;
-  name: string;
-}
-
-interface ServiceOption {
-  id: string;
-  name: string;
-  protocol: string;
-  port: number;
-  accessMethod: string;
-  exposable: boolean;
-}
-
-interface AssetOption {
-  id: string;
-  siteId: string;
-  name: string;
-  services: ServiceOption[];
-}
-
-interface DeviceOption {
-  id: string;
-  name: string;
-  subjectId: string;
-  peerId: string;
-  managed: boolean;
-}
+import type { AssetOption, DeviceOption, SiteOption } from "./console/types";
 
 interface AccessRequestFormProps {
   sites: SiteOption[];
   assets: AssetOption[];
   devices: DeviceOption[];
+  onSubmitted?: () => void;
 }
 
 type Scope = "site" | "asset" | "service";
@@ -50,7 +24,7 @@ function defaultValidUntil(): string {
   return new Date(Date.now() + 30 * 60 * 1000).toISOString();
 }
 
-export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormProps) {
+export function AccessRequestForm({ sites, assets, devices, onSubmitted }: AccessRequestFormProps) {
   const router = useRouter();
   const managedDevices = devices.filter((device) => device.managed);
   const [scope, setScope] = useState<Scope>("service");
@@ -114,6 +88,7 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
 
       setMessage(`申请 ${result.item.id} 正等待审批，尚未授予网络访问权限。`);
       startTransition(() => router.refresh());
+      onSubmitted?.();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "无法提交访问申请。");
     } finally {
