@@ -4,8 +4,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Fusion Control Plane",
-  description: "Asset-aware ZTNA and PAM control plane",
+  title: "Fusion 控制平面",
+  description: "面向资产的 ZTNA 与 PAM 控制平面",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

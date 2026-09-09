@@ -4,7 +4,7 @@ export async function readJson(request: Request): Promise<Record<string, unknown
   try {
     const value: unknown = await request.json();
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
-      throw new FusionError("Request body must be a JSON object.", 400);
+      throw new FusionError("请求体必须是 JSON 对象。", 400);
     }
 
     return value as Record<string, unknown>;
@@ -13,7 +13,7 @@ export async function readJson(request: Request): Promise<Record<string, unknown
       throw error;
     }
 
-    throw new FusionError("Request body must be valid JSON.", 400);
+    throw new FusionError("请求体必须是有效的 JSON。", 400);
   }
 }
 
@@ -22,6 +22,6 @@ export function apiError(error: unknown): Response {
     return Response.json({ error: error.message }, { status: error.status });
   }
 
-  console.error("Fusion API request failed", error);
-  return Response.json({ error: "Internal server error." }, { status: 500 });
+  console.error("Fusion API 请求失败", error);
+  return Response.json({ error: "内部服务器错误。" }, { status: 500 });
 }

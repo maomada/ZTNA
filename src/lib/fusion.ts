@@ -277,18 +277,18 @@ export class FusionError extends Error {
 export function authorizeNetworkAuditIngest(request: Request): void {
   const expected = process.env.NETWORK_AUDIT_INGEST_SECRET;
   if (expected === undefined || expected === "") {
-    throw new FusionError("Network audit ingestion is not configured.", 503);
+    throw new FusionError("网络审计数据采集尚未配置。", 503);
   }
 
   const received = request.headers.get("x-network-audit-secret");
   if (received === null) {
-    throw new FusionError("Unauthorized network audit ingestion.", 401);
+    throw new FusionError("网络审计数据采集未获授权。", 401);
   }
 
   const expectedBuffer = Buffer.from(expected);
   const receivedBuffer = Buffer.from(received);
   if (expectedBuffer.length !== receivedBuffer.length || !timingSafeEqual(expectedBuffer, receivedBuffer)) {
-    throw new FusionError("Unauthorized network audit ingestion.", 401);
+    throw new FusionError("网络审计数据采集未获授权。", 401);
   }
 }
 
@@ -341,7 +341,7 @@ function timestamp(value = new Date()): string {
 
 function asInput(value: unknown): Input {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new FusionError("Request body must be a JSON object.", 400);
+    throw new FusionError("请求体必须是 JSON 对象。", 400);
   }
 
   return value as Input;
@@ -351,7 +351,7 @@ function requiredString(input: Input, key: string): string {
   const value = input[key];
 
   if (typeof value !== "string" || value.trim() === "") {
-    throw new FusionError(`${key} must be a non-empty string.`, 422);
+    throw new FusionError(`${key} 必须是非空字符串。`, 422);
   }
 
   return value.trim();
@@ -368,7 +368,7 @@ function optionalString(input: Input, key: string): string | undefined {
 function requiredDate(input: Input, key: string): Date {
   const value = new Date(requiredString(input, key));
   if (Number.isNaN(value.getTime())) {
-    throw new FusionError(`${key} must be a valid ISO timestamp.`, 422);
+    throw new FusionError(`${key} 必须是有效的 ISO 时间戳。`, 422);
   }
 
   return value;
@@ -392,7 +392,7 @@ function optionalBoolean(input: Input, key: string): boolean | undefined {
   }
 
   if (typeof input[key] !== "boolean") {
-    throw new FusionError(`${key} must be a boolean.`, 422);
+    throw new FusionError(`${key} 必须是布尔值。`, 422);
   }
 
   return input[key] as boolean;
@@ -405,13 +405,13 @@ function optionalLabels(input: Input, key: string): Record<string, string> | und
 
   const value = input[key];
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new FusionError(`${key} must be an object of string values.`, 422);
+    throw new FusionError(`${key} 必须是值均为字符串的对象。`, 422);
   }
 
   const labels: Record<string, string> = {};
   for (const [label, labelValue] of Object.entries(value)) {
     if (label.trim() === "" || typeof labelValue !== "string") {
-      throw new FusionError(`${key} must be an object of string values.`, 422);
+      throw new FusionError(`${key} 必须是值均为字符串的对象。`, 422);
     }
 
     labels[label.trim()] = labelValue;
@@ -423,12 +423,12 @@ function optionalLabels(input: Input, key: string): Record<string, string> | und
 function stringArray(input: Input, key: string): string[] {
   const value = input[key];
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
-    throw new FusionError(`${key} must be an array of non-empty strings.`, 422);
+    throw new FusionError(`${key} 必须是非空字符串数组。`, 422);
   }
 
   const items = value.map((item) => item.trim());
   if (new Set(items).size !== items.length) {
-    throw new FusionError(`${key} must not contain duplicates.`, 422);
+    throw new FusionError(`${key} 不得包含重复项。`, 422);
   }
 
   return items;
@@ -446,7 +446,7 @@ function enumValue<T extends string>(
 
   const value = requiredString(input, key).toLowerCase();
   if (!values.includes(value as T)) {
-    throw new FusionError(`${key} must be one of: ${values.join(", ")}.`, 422);
+    throw new FusionError(`${key} 必须是以下值之一：${values.join(", ")}。`, 422);
   }
 
   return value as T;
@@ -463,7 +463,7 @@ function optionalEnum<T extends string>(input: Input, key: string, values: reado
 function port(input: Input, key: string): number {
   const value = input[key];
   if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 65_535) {
-    throw new FusionError(`${key} must be an integer between 1 and 65535.`, 422);
+    throw new FusionError(`${key} 必须是介于 1 和 65535 之间的整数。`, 422);
   }
 
   return value as number;
@@ -475,18 +475,18 @@ function optionalPort(input: Input, key: string): number | undefined {
 
 function normalizedAddress(type: EndpointType, value: string): string {
   if (type === "ipv4" && isIP(value) !== 4) {
-    throw new FusionError("address must be a valid IPv4 address.", 422);
+    throw new FusionError("address 必须是有效的 IPv4 地址。", 422);
   }
 
   if (type === "ipv6" && isIP(value) !== 6) {
-    throw new FusionError("address must be a valid IPv6 address.", 422);
+    throw new FusionError("address 必须是有效的 IPv6 地址。", 422);
   }
 
   if (type === "dns") {
     const address = value.toLowerCase();
     const dnsName = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
     if (!dnsName.test(address)) {
-      throw new FusionError("address must be a valid DNS name.", 422);
+      throw new FusionError("address 必须是有效的 DNS 名称。", 422);
     }
 
     return address;
@@ -536,7 +536,7 @@ export class FusionStore {
 
   static fromState(value: unknown, { now = () => new Date() }: { now?: () => Date } = {}): FusionStore {
     if (!isFusionState(value)) {
-      throw new FusionError("Persisted Fusion state is invalid.", 503);
+      throw new FusionError("已持久化的 Fusion 状态无效。", 503);
     }
 
     const store = new FusionStore({ seed: false, now });
@@ -650,7 +650,7 @@ export class FusionStore {
 
     const name = requiredString(input, "name");
     if ([...this.routerGroups.values()].some((group) => group.siteId === siteId && group.name === name)) {
-      throw new FusionError("A router group with this name already exists in the site.", 409);
+      throw new FusionError("该站点中已存在同名路由器组。", 409);
     }
 
     const now = timestamp();
@@ -683,10 +683,10 @@ export class FusionStore {
     const peerId = requiredString(input, "peerId");
     const netbirdGroupId = requiredString(input, "netbirdGroupId");
     if ([...this.devices.values()].some((device) => device.peerId === peerId)) {
-      throw new FusionError("A Device with this peerId already exists.", 409);
+      throw new FusionError("已存在使用此 peerId 的设备。", 409);
     }
     if ([...this.devices.values()].some((device) => device.netbirdGroupId === netbirdGroupId)) {
-      throw new FusionError("A Device with this netbirdGroupId already exists.", 409);
+      throw new FusionError("已存在使用此 netbirdGroupId 的设备。", 409);
     }
 
     const now = timestamp();
@@ -711,10 +711,10 @@ export class FusionStore {
       (candidate) => candidate.subjectId === subjectId && candidate.peerId === peerId,
     );
     if (device === undefined) {
-      throw new FusionError("A Device enrollment is required for NetBird policy synchronization.", 422);
+      throw new FusionError("NetBird 策略同步需要已注册的设备。", 422);
     }
     if (!device.managed) {
-      throw new FusionError("NetBird policy synchronization requires a managed Device.", 422);
+      throw new FusionError("NetBird 策略同步要求使用受管设备。", 422);
     }
 
     return clone(device);
@@ -841,7 +841,7 @@ export class FusionStore {
     const address = normalizedAddress(type, requiredString(input, "address"));
 
     if (this.endpointExistsInSite(asset.siteId, address, type)) {
-      throw new FusionError("An endpoint with this address already exists in the site.", 409);
+      throw new FusionError("该站点中已存在使用此地址的端点。", 409);
     }
 
     const existingEndpoints = this.endpointsForAsset(asset.id);
@@ -911,7 +911,7 @@ export class FusionStore {
           discovered.status === "unmanaged",
       )
     ) {
-      throw new FusionError("This unmanaged endpoint has already been discovered in the site.", 409);
+      throw new FusionError("该站点中已发现此未受管端点。", 409);
     }
 
     const now = timestamp();
@@ -946,7 +946,7 @@ export class FusionStore {
   importDiscoveredAsset(discoveredId: string, value: unknown): AssetDetail {
     const discovered = this.requireDiscoveredAsset(discoveredId);
     if (discovered.status !== "unmanaged") {
-      throw new FusionError("Discovered asset has already been imported.", 409);
+      throw new FusionError("已发现的资产已被导入。", 409);
     }
 
     const input = asInput(value);
@@ -962,7 +962,7 @@ export class FusionStore {
     }
 
     if (this.endpointExistsInSite(discovered.siteId, discovered.address, discovered.type)) {
-      throw new FusionError("A managed endpoint with this address already exists in the site.", 409);
+      throw new FusionError("该站点中已存在使用此地址的受管端点。", 409);
     }
 
     const asset = this.createAsset(assetInput);
@@ -1086,17 +1086,17 @@ export class FusionStore {
     const asset = this.requireAsset(assetId);
 
     if (asset.status !== "managed") {
-      throw new FusionError("Static permissions can only target managed assets.", 422);
+      throw new FusionError("静态权限只能以受管资产为目标。", 422);
     }
     this.getManagedDeviceForSubjectPeer(subjectId, devicePeerId);
 
     if (serviceId !== undefined) {
       const service = this.requireService(serviceId);
       if (service.assetId !== assetId) {
-        throw new FusionError("Service must belong to the permitted asset.", 422);
+        throw new FusionError("服务必须属于获准访问的资产。", 422);
       }
       if (!service.exposable || service.accessMethod !== "netbird") {
-        throw new FusionError("Service permissions can only target NetBird-exposable services.", 422);
+        throw new FusionError("服务权限只能以可通过 NetBird 暴露的服务为目标。", 422);
       }
     }
 
@@ -1110,7 +1110,7 @@ export class FusionStore {
           (permission.scope === "asset" || scope === "asset" || permission.serviceId === serviceId),
       )
     ) {
-      throw new FusionError("This device already has overlapping static access to the asset.", 409);
+      throw new FusionError("此设备已拥有与该资产重叠的静态访问权限。", 409);
     }
 
     const now = timestamp();
@@ -1158,7 +1158,7 @@ export class FusionStore {
     const validUntil = requiredDate(input, "validUntil");
     const now = this.now();
     if (validUntil.getTime() <= now.getTime()) {
-      throw new FusionError("validUntil must be in the future.", 422);
+      throw new FusionError("validUntil 必须是未来时间。", 422);
     }
     this.getManagedDeviceForSubjectPeer(subjectId, devicePeerId);
 
@@ -1172,7 +1172,7 @@ export class FusionStore {
         .filter((asset) => asset.siteId === siteId && asset.status === "managed")
         .map((asset) => asset.id);
       if (this.netbirdExposableServiceIds(siteAssetIds).length === 0) {
-        throw new FusionError("The requested site has no NetBird-exposable services.", 422);
+        throw new FusionError("所请求的站点不存在可通过 NetBird 暴露的服务。", 422);
       }
     } else {
       assetId = requiredString(input, "assetId");
@@ -1182,7 +1182,7 @@ export class FusionStore {
         serviceId = requiredString(input, "serviceId");
         this.requireExposableNetBirdService(asset.id, serviceId);
       } else if (this.netbirdExposableServiceIds([asset.id]).length === 0) {
-        throw new FusionError("The requested asset has no NetBird-exposable services.", 422);
+        throw new FusionError("所请求的资产不存在可通过 NetBird 暴露的服务。", 422);
       }
     }
 
@@ -1240,7 +1240,7 @@ export class FusionStore {
     const validUntil = requiredDate(input, "validUntil");
 
     if (validUntil.getTime() <= now.getTime()) {
-      throw new FusionError("validUntil must be in the future.", 422);
+      throw new FusionError("validUntil 必须是未来时间。", 422);
     }
     this.getManagedDeviceForSubjectPeer(subjectId, devicePeerId);
 
@@ -1269,11 +1269,11 @@ export class FusionStore {
     }
 
     if (serviceIds.length === 0) {
-      throw new FusionError("The grant scope has no NetBird-exposable services.", 422);
+      throw new FusionError("此授权范围内不存在可通过 NetBird 暴露的服务。", 422);
     }
 
     if (source === "teleport" && (requestId === undefined || reviewerId === undefined)) {
-      throw new FusionError("Teleport grants require requestId and reviewerId.", 422);
+      throw new FusionError("Teleport 授权需要 requestId 和 reviewerId。", 422);
     }
     if (
       source === "teleport" &&
@@ -1281,7 +1281,7 @@ export class FusionStore {
         (grant) => grant.source === "teleport" && grant.requestId === requestId,
       )
     ) {
-      throw new FusionError("A Teleport grant already exists for this request.", 409);
+      throw new FusionError("此请求已存在 Teleport 授权。", 409);
     }
 
     const nowTimestamp = timestamp(now);
@@ -1371,12 +1371,12 @@ export class FusionStore {
   listCompiledAccess(devicePeerId: string, subjectId: string): CompiledAccess[] {
     const peerId = devicePeerId.trim();
     if (peerId === "") {
-      throw new FusionError("devicePeerId must be a non-empty string.", 422);
+      throw new FusionError("devicePeerId 必须是非空字符串。", 422);
     }
 
     const subject = subjectId.trim();
     if (subject === "") {
-      throw new FusionError("subjectId must be a non-empty string.", 422);
+      throw new FusionError("subjectId 必须是非空字符串。", 422);
     }
 
     return [
@@ -1420,7 +1420,7 @@ export class FusionStore {
     const startedAt = "startedAt" in input ? requiredDate(input, "startedAt") : this.now();
     const endedAt = "endedAt" in input ? requiredDate(input, "endedAt") : undefined;
     if (endedAt !== undefined && endedAt.getTime() < startedAt.getTime()) {
-      throw new FusionError("endedAt must not be earlier than startedAt.", 422);
+      throw new FusionError("endedAt 不得早于 startedAt。", 422);
     }
 
     const access = this.listCompiledAccess(deviceId, userId).find(
@@ -1480,7 +1480,7 @@ export class FusionStore {
   getNetworkResourceForEndpoint(endpointId: string): NetworkResource {
     const resource = this.networkResources.get(endpointId);
     if (resource === undefined) {
-      throw new FusionError("Network Resource not found.", 404);
+      throw new FusionError("未找到网络资源。", 404);
     }
 
     return clone(resource);
@@ -1536,7 +1536,7 @@ export class FusionStore {
   private requireSite(siteId: string): Site {
     const site = this.sites.get(siteId);
     if (!site) {
-      throw new FusionError("Site not found.", 404);
+      throw new FusionError("未找到站点。", 404);
     }
 
     return site;
@@ -1545,7 +1545,7 @@ export class FusionStore {
   private requireRouterGroup(routerGroupId: string): RouterGroup {
     const routerGroup = this.routerGroups.get(routerGroupId);
     if (!routerGroup) {
-      throw new FusionError("Router group not found.", 404);
+      throw new FusionError("未找到路由器组。", 404);
     }
 
     return routerGroup;
@@ -1554,7 +1554,7 @@ export class FusionStore {
   private requireDevice(deviceId: string): Device {
     const device = this.devices.get(deviceId);
     if (!device) {
-      throw new FusionError("Device not found.", 404);
+      throw new FusionError("未找到设备。", 404);
     }
 
     return device;
@@ -1563,7 +1563,7 @@ export class FusionStore {
   private requireAsset(assetId: string): Asset {
     const asset = this.assets.get(assetId);
     if (!asset) {
-      throw new FusionError("Asset not found.", 404);
+      throw new FusionError("未找到资产。", 404);
     }
 
     return asset;
@@ -1572,7 +1572,7 @@ export class FusionStore {
   private requireService(serviceId: string): Service {
     const service = this.services.get(serviceId);
     if (!service) {
-      throw new FusionError("Service not found.", 404);
+      throw new FusionError("未找到服务。", 404);
     }
 
     return service;
@@ -1581,7 +1581,7 @@ export class FusionStore {
   private requireStaticAssetPermission(permissionId: string): StaticAssetPermission {
     const permission = this.staticAssetPermissions.get(permissionId);
     if (!permission) {
-      throw new FusionError("Static asset permission not found.", 404);
+      throw new FusionError("未找到静态资产权限。", 404);
     }
 
     return permission;
@@ -1590,7 +1590,7 @@ export class FusionStore {
   private requireAccessGrant(grantId: string): AccessGrant {
     const grant = this.accessGrants.get(grantId);
     if (!grant) {
-      throw new FusionError("Access grant not found.", 404);
+      throw new FusionError("未找到访问授权。", 404);
     }
 
     return grant;
@@ -1599,7 +1599,7 @@ export class FusionStore {
   private requireNetworkResource(resourceId: string): NetworkResource {
     const resource = [...this.networkResources.values()].find((candidate) => candidate.id === resourceId);
     if (!resource) {
-      throw new FusionError("Network Resource not found.", 404);
+      throw new FusionError("未找到网络资源。", 404);
     }
 
     return resource;
@@ -1608,7 +1608,7 @@ export class FusionStore {
   private requireDiscoveredAsset(discoveredId: string): DiscoveredAsset {
     const discovered = this.discoveredAssets.get(discoveredId);
     if (!discovered) {
-      throw new FusionError("Discovered asset not found.", 404);
+      throw new FusionError("未找到已发现的资产。", 404);
     }
 
     return discovered;
@@ -1617,7 +1617,7 @@ export class FusionStore {
   private requireManagedAsset(assetId: string): Asset {
     const asset = this.requireAsset(assetId);
     if (asset.status !== "managed") {
-      throw new FusionError("Access grants can only target managed assets.", 422);
+      throw new FusionError("访问授权只能以受管资产为目标。", 422);
     }
 
     return asset;
@@ -1626,10 +1626,10 @@ export class FusionStore {
   private requireExposableNetBirdService(assetId: string, serviceId: string): Service {
     const service = this.requireService(serviceId);
     if (service.assetId !== assetId) {
-      throw new FusionError("Service must belong to the permitted asset.", 422);
+      throw new FusionError("服务必须属于获准访问的资产。", 422);
     }
     if (!service.exposable || service.accessMethod !== "netbird") {
-      throw new FusionError("Service permissions can only target NetBird-exposable services.", 422);
+      throw new FusionError("服务权限只能以可通过 NetBird 暴露的服务为目标。", 422);
     }
 
     return service;
@@ -1637,7 +1637,7 @@ export class FusionStore {
 
   private assertRouterGroupBelongsToSite(routerGroupId: string, siteId: string): void {
     if (this.requireRouterGroup(routerGroupId).siteId !== siteId) {
-      throw new FusionError("Router group must belong to the asset site.", 422);
+      throw new FusionError("路由器组必须属于该资产所在的站点。", 422);
     }
   }
 
@@ -1647,7 +1647,7 @@ export class FusionStore {
         (asset) => asset.siteId === siteId && asset.name === name && asset.id !== ignoredAssetId,
       )
     ) {
-      throw new FusionError("An asset with this name already exists in the site.", 409);
+      throw new FusionError("该站点中已存在同名资产。", 409);
     }
   }
 
@@ -1698,7 +1698,7 @@ export class FusionStore {
 
     const now = this.now();
     if (new Date(grant.validUntil).getTime() <= now.getTime()) {
-      // ponytail: expiry is evaluated during policy compilation; schedule protected policy synchronization at the TTL boundary in production.
+      // ponytail: 在策略编译时评估过期；生产环境应在 TTL 边界安排受保护的策略同步。
       grant.status = "expired";
       grant.updatedAt = timestamp(now);
       this.recordAudit(
@@ -1777,14 +1777,14 @@ export class FusionStore {
 
   private seed(): void {
     const site = this.createSite({
-      name: "Tokyo IDC",
-      description: "Primary production site in Tokyo.",
+      name: "东京 IDC",
+      description: "东京的主要生产站点。",
       networkId: "net_tokyo_idc",
       labels: { environment: "production", region: "ap-northeast-1" },
     });
     const routerGroup = this.createRouterGroup({
       siteId: site.id,
-      name: "Tokyo Routers",
+      name: "东京路由器组",
       peerIds: ["router-tokyo-01", "router-tokyo-02"],
     });
     const mysql = this.createAsset({
@@ -1822,5 +1822,5 @@ export class FusionStore {
   }
 }
 
-// ponytail: in-memory state is sufficient for the Phase 1 slice; replace with transactional persistence before multi-instance deployment.
+// ponytail: 内存状态足以支撑第一阶段切片；部署多实例前应替换为事务性持久化。
 export const fusionStore = new FusionStore();

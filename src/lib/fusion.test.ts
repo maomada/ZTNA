@@ -43,7 +43,7 @@ function memoryRepository(store: FusionStore) {
   };
 }
 
-test("maps an IPv4 endpoint to an asset-scoped /32 Network Resource", () => {
+test("将 IPv4 端点映射为资产范围的 /32 网络资源", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const asset = store.createAsset({ ...scope, name: "mysql-prod-01" });
@@ -60,7 +60,7 @@ test("maps an IPv4 endpoint to an asset-scoped /32 Network Resource", () => {
   assert.equal(endpoint.networkResource.syncState, "desired");
 });
 
-test("restores control-plane state from a durable snapshot", () => {
+test("从持久化快照恢复控制平面状态", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const asset = store.createAsset({ ...scope, name: "mysql-prod-01" });
@@ -74,7 +74,7 @@ test("restores control-plane state from a durable snapshot", () => {
   assert.deepEqual(restored.listAuditEvents(), store.listAuditEvents());
 });
 
-test("syncs an Asset Resource through the documented NetBird resource API", async () => {
+test("通过文档化的 NetBird 资源 API 同步资产资源", async () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const routerGroup = store.createRouterGroup({
@@ -118,7 +118,7 @@ test("syncs an Asset Resource through the documented NetBird resource API", asyn
   });
 });
 
-test("does not persist a stale NetBird Resource synchronization result", async () => {
+test("不会持久化过时的 NetBird 资源同步结果", async () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const primaryRouterGroup = store.createRouterGroup({
@@ -163,7 +163,7 @@ test("does not persist a stale NetBird Resource synchronization result", async (
   assert.equal(resource.netbirdResourceId, undefined);
 });
 
-test("does not write a resource when its NetBird Group cannot be verified", async () => {
+test("无法验证 NetBird 组时不会写入资源", async () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const routerGroup = store.createRouterGroup({
@@ -192,7 +192,7 @@ test("does not write a resource when its NetBird Group cannot be verified", asyn
   assert.deepEqual(calls, ["https://netbird.example/api/groups/grp_tokyo_routers"]);
 });
 
-test("requires a dedicated secret for NetBird synchronization", () => {
+test("NetBird 同步需要独立密钥", () => {
   const previous = process.env.NETBIRD_SYNC_SECRET;
   try {
     delete process.env.NETBIRD_SYNC_SECRET;
@@ -231,7 +231,7 @@ test("requires a dedicated secret for NetBird synchronization", () => {
   }
 });
 
-test("requires a dedicated secret for network audit ingestion", () => {
+test("网络审计采集需要独立密钥", () => {
   const previous = process.env.NETWORK_AUDIT_INGEST_SECRET;
   try {
     delete process.env.NETWORK_AUDIT_INGEST_SECRET;
@@ -270,7 +270,7 @@ test("requires a dedicated secret for network audit ingestion", () => {
   }
 });
 
-test("continues a bulk NetBird sync after marking an individual resource failed", async () => {
+test("标记单个资源同步失败后继续批量 NetBird 同步", async () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const routerGroup = store.createRouterGroup({
@@ -306,7 +306,7 @@ test("continues a bulk NetBird sync after marking an individual resource failed"
   assert.equal(results.length, 2);
   assert.equal(store.getNetworkResource(failed.networkResource.id).syncState, "failed");
   assert.equal(store.getNetworkResource(succeeded.networkResource.id).syncState, "synced");
-  assert.equal(results.find((result) => result.item.id === failed.networkResource.id)?.error, "NetBird API request failed with 503.");
+  assert.equal(results.find((result) => result.item.id === failed.networkResource.id)?.error, "NetBird API 请求失败，状态码为 503。");
   assert.ok(
     store
       .listAuditEvents()
@@ -319,7 +319,7 @@ test("continues a bulk NetBird sync after marking an individual resource failed"
   );
 });
 
-test("marks a synchronized resource desired when its Asset changes RouterGroup", () => {
+test("资产切换路由器组后将已同步资源标记为待同步", () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const firstRouterGroup = store.createRouterGroup({
@@ -347,7 +347,7 @@ test("marks a synchronized resource desired when its Asset changes RouterGroup",
   );
 });
 
-test("projects effective access into a dedicated NetBird policy and removes it at expiry", async () => {
+test("将有效访问权限投影到专用 NetBird 策略，并在过期时移除", async () => {
   let current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   const device = store.createDevice({
@@ -435,7 +435,7 @@ test("projects effective access into a dedicated NetBird policy and removes it a
   assert.deepEqual(JSON.parse(String(calls[4].init?.body)).rules, []);
 });
 
-test("retries persisted NetBird Policy synchronization after an authorization changes", async () => {
+test("授权变化后重试持久化 NetBird 策略同步", async () => {
   const store = new FusionStore({ seed: false });
   const device = store.createDevice({
     name: "Alice laptop",
@@ -497,7 +497,7 @@ test("retries persisted NetBird Policy synchronization after an authorization ch
   );
 });
 
-test("fails closed when an enrolled Device Group includes another peer", async () => {
+test("已注册设备组包含其他对等节点时默认拒绝", async () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -539,7 +539,7 @@ test("fails closed when an enrolled Device Group includes another peer", async (
   );
 });
 
-test("requires a managed enrolled Device before creating network authorizations", () => {
+test("创建网络授权前需要受管且已注册的设备", () => {
   const store = new FusionStore({ seed: false });
   const site = store.createSite({ name: "Tokyo", networkId: "net_tokyo" });
   const routerGroup = store.createRouterGroup({
@@ -601,7 +601,7 @@ test("requires a managed enrolled Device before creating network authorizations"
   );
 });
 
-test("does not synchronize NetBird policy from Teleport until explicitly enabled", async () => {
+test("未显式启用前不会从 Teleport 同步 NetBird 策略", async () => {
   const previous = process.env.NETBIRD_POLICY_SYNC_ON_TELEPORT;
   const store = new FusionStore({ seed: false });
   let calls = 0;
@@ -627,7 +627,7 @@ test("does not synchronize NetBird policy from Teleport until explicitly enabled
   }
 });
 
-test("permits repeated addresses in separate site namespaces", () => {
+test("允许不同站点命名空间中的重复地址", () => {
   const store = new FusionStore({ seed: false });
   const tokyo = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const osaka = createSiteAndRouter(store, "Osaka", "net_osaka");
@@ -642,7 +642,7 @@ test("permits repeated addresses in separate site namespaces", () => {
   assert.equal(second.networkResource.siteId, osaka.siteId);
 });
 
-test("rejects a duplicate endpoint inside one site", () => {
+test("拒绝同一站点内的重复端点", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const firstAsset = store.createAsset({ ...scope, name: "mysql-prod-01" });
@@ -655,7 +655,7 @@ test("rejects a duplicate endpoint inside one site", () => {
   );
 });
 
-test("requires an asset router group to belong to the selected site", () => {
+test("要求资产路由器组属于所选站点", () => {
   const store = new FusionStore({ seed: false });
   const tokyo = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const osaka = createSiteAndRouter(store, "Osaka", "net_osaka");
@@ -666,7 +666,7 @@ test("requires an asset router group to belong to the selected site", () => {
   );
 });
 
-test("limits exposed services to a valid transport port", () => {
+test("将可暴露服务限制在有效传输端口", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const asset = store.createAsset({ ...scope, name: "mysql-prod-01" });
@@ -685,7 +685,7 @@ test("limits exposed services to a valid transport port", () => {
   );
 });
 
-test("compiles only the permitted asset's NetBird-exposable services for its bound device", () => {
+test("仅为绑定设备编译获准资产中可通过 NetBird 暴露的服务", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -720,7 +720,7 @@ test("compiles only the permitted asset's NetBird-exposable services for its bou
   assert.equal(store.listCompiledAccess("another-device", "alice").length, 0);
 });
 
-test("requires both subject and device when compiling effective access", () => {
+test("编译有效访问权限时要求同时提供主体和设备", () => {
   const store = new FusionStore({ seed: false });
 
   assert.throws(
@@ -733,7 +733,7 @@ test("requires both subject and device when compiling effective access", () => {
   );
 });
 
-test("keeps static permissions ineffective without an exposable NetBird service", () => {
+test("没有可暴露 NetBird 服务时静态权限不生效", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -745,7 +745,7 @@ test("keeps static permissions ineffective without an exposable NetBird service"
   assert.equal(store.listCompiledAccess("alice-laptop", "alice").length, 0);
 });
 
-test("narrows a service-scoped permission to the selected protocol and port", () => {
+test("将服务范围权限收窄到所选协议和端口", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -769,7 +769,7 @@ test("narrows a service-scoped permission to the selected protocol and port", ()
   assert.equal(access.some((rule) => rule.ports.includes(22)), false);
 });
 
-test("compiles a device-bound access grant and removes its rules on revoke", () => {
+test("编译设备绑定访问授权并在撤销时移除规则", () => {
   const current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   enrollDevice(store);
@@ -799,7 +799,7 @@ test("compiles a device-bound access grant and removes its rules on revoke", () 
   assert.equal(store.listCompiledAccess("alice-laptop", "alice").length, 0);
 });
 
-test("keeps an access request pending without creating a network grant", () => {
+test("保持访问申请待审批而不创建网络授权", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -823,7 +823,7 @@ test("keeps an access request pending without creating a network grant", () => {
   assert.ok(store.listAuditEvents().some((event) => event.action === "access_request.created" && event.resourceId === request.id));
 });
 
-test("records network decisions from the effective policy instead of trusting the reporter", () => {
+test("根据有效策略记录网络决策而不信任上报方", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
@@ -864,7 +864,7 @@ test("records network decisions from the effective policy instead of trusting th
   assert.equal(store.listNetworkAccessEvents().length, 2);
 });
 
-test("runs the documented Teleport-to-NetBird MVP with a scoped, expiring Grant", async () => {
+test("运行文档化的 Teleport 到 NetBird MVP，包含限定范围且会过期的授权", async () => {
   let current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   store.createDevice({
@@ -958,7 +958,7 @@ test("runs the documented Teleport-to-NetBird MVP with a scoped, expiring Grant"
   assert.deepEqual(JSON.parse(String(policyCalls[4].init?.body)).rules, []);
 });
 
-test("expires a grant at its TTL without manual policy deletion", () => {
+test("授权在 TTL 到期时失效，无需手动删除策略", () => {
   let current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   enrollDevice(store);
@@ -981,7 +981,7 @@ test("expires a grant at its TTL without manual policy deletion", () => {
   assert.ok(store.listAuditEvents().some((event) => event.action === "access_grant.expired" && event.resourceId === grant.id));
 });
 
-test("snapshots site-grant Assets and Services at grant creation", () => {
+test("在创建授权时快照站点范围资产和服务", () => {
   const current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   enrollDevice(store);
@@ -1008,7 +1008,7 @@ test("snapshots site-grant Assets and Services at grant creation", () => {
   assert.equal(access.some((rule) => rule.destination === "10.20.30.16/32"), false);
 });
 
-test("maps an approved Teleport request to one idempotent grant and revokes it by request ID", () => {
+test("将已批准的 Teleport 请求映射为一条幂等授权，并按请求 ID 撤销", () => {
   const current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   enrollDevice(store);
@@ -1052,7 +1052,7 @@ test("maps an approved Teleport request to one idempotent grant and revokes it b
   assert.equal(store.listCompiledAccess("alice-laptop", "alice").length, 0);
 });
 
-test("changes the effective Network Map revision when an authorization is revoked", () => {
+test("授权撤销时更改有效网络映射版本", () => {
   const current = new Date("2026-09-08T10:00:00.000Z");
   const store = new FusionStore({ seed: false, now: () => current });
   enrollDevice(store);
@@ -1082,7 +1082,7 @@ test("changes the effective Network Map revision when an authorization is revoke
   assert.notEqual(revokedMap.revision, grantedMap.revision);
 });
 
-test("keeps discovered assets unmanaged until an explicit import creates their resource", () => {
+test("在显式导入创建资源前保持发现资产未受管", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const discovered = store.createDiscoveredAsset({
@@ -1111,7 +1111,7 @@ test("keeps discovered assets unmanaged until an explicit import creates their r
   );
 });
 
-test("rejects an import that would duplicate a managed endpoint without creating an Asset", () => {
+test("拒绝会产生重复受管端点的导入，不创建资产", () => {
   const store = new FusionStore({ seed: false });
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");
   const managed = store.createAsset({ ...scope, name: "existing-db" });
@@ -1130,7 +1130,7 @@ test("rejects an import that would duplicate a managed endpoint without creating
   assert.equal(store.listDiscoveredAssets()[0].status, "unmanaged");
 });
 
-test("records successful control-plane and Teleport mutations without auditing reads", () => {
+test("记录成功的控制平面和 Teleport 变更而不审计读取", () => {
   assert.equal(new FusionStore().listAuditEvents().length, 0);
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
@@ -1169,7 +1169,7 @@ test("records successful control-plane and Teleport mutations without auditing r
   assert.ok(events.some((event) => event.action === "access_grant.created" && event.origin === "teleport"));
 });
 
-test("removes an asset's endpoint resources and services with the asset", () => {
+test("删除资产时移除其端点资源和服务", () => {
   const store = new FusionStore({ seed: false });
   enrollDevice(store);
   const scope = createSiteAndRouter(store, "Tokyo", "net_tokyo");

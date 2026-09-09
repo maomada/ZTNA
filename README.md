@@ -1,21 +1,21 @@
-# Fusion Control Plane
+# Fusion 控制平面
 
-Phase 1 of the Asset-aware ZTNA/PAM control plane. It models Sites, RouterGroups, Assets, Endpoints, and Services independently of NetBird peers and IP addresses.
+面向资产的 ZTNA/PAM 控制平面第一阶段。它独立于 NetBird 对等节点和 IP 地址，对站点、路由器组、资产、端点和服务进行建模。
 
-## Run
+## 运行
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` for the Astryx-based asset registry.
+打开 `http://localhost:3000` 查看基于 Astryx 的资产登记界面。
 
-## Persistence
+## 持久化
 
-Set `DATABASE_URL` to a PostgreSQL connection URL for any deployment that must survive a process restart or run more than one application instance. Fusion creates its `fusion_control_plane_state` table on first use and stores the current control-plane snapshot as one locked JSONB row. Without `DATABASE_URL`, it deliberately uses seeded process-local memory for local development only.
+对于需要在进程重启后保留数据或运行多个应用实例的部署，请将 `DATABASE_URL` 设置为 PostgreSQL 连接 URL。Fusion 会在首次使用时创建 `fusion_control_plane_state` 表，并将当前控制平面快照存储为一行受锁保护的 JSONB 数据。未设置 `DATABASE_URL` 时，系统会刻意使用带有种子数据的进程本地内存，仅适用于本地开发。
 
-## Phase 1 API
+## 第一阶段 API
 
 - `POST` / `GET` `/api/sites`
 - `GET` `/api/sites/:id`
@@ -45,29 +45,29 @@ Set `DATABASE_URL` to a PostgreSQL connection URL for any deployment that must s
 - `POST` `/api/network-resources/sync`
 - `POST` `/api/network-policies/sync`
 
-IPv4 endpoints compile to an asset-scoped `/32` Network Resource; IPv6 endpoints compile to `/128`; DNS endpoints retain their domain name. A static Asset Permission binds one subject and device peer to one Asset, then only compiles that Asset's NetBird-exposable Services. Passing an optional `serviceId` narrows the permission to one direct service and its exact protocol and port. An `AccessGrant` applies the same compiler logic with a bound device, explicit expiry, revocation, and a Site/Asset/Service snapshot. The resulting resources and compiled rules are local desired state until an authorized NetBird synchronization explicitly applies the resource configuration.
+IPv4 端点会编译为资产范围的 `/32` 网络资源，IPv6 端点会编译为 `/128`，DNS 端点则保留域名。静态资产权限会将一个主体和设备对等节点绑定到一个资产，并且只编译该资产中可通过 NetBird 暴露的服务。可选的 `serviceId` 可将权限缩小到一个直接服务及其精确协议和端口。`AccessGrant` 会对绑定设备、显式过期时间、撤销状态以及站点/资产/服务快照应用相同的编译逻辑。在授权的 NetBird 同步明确应用资源配置前，生成的资源和编译规则都只是本地目标状态。
 
-Grant expiry is evaluated whenever effective access is compiled. Run the protected NetBird policy synchronization endpoint on a schedule at the TTL boundary so NetBird receives the resulting empty or reduced rule set.
+每次编译有效访问权限时都会评估授权过期。请在 TTL 边界按计划调用受保护的 NetBird 策略同步端点，使 NetBird 获得相应清空或缩减后的规则集。
 
-`/api/network-map` returns the subject-and-device-specific union of static permissions and active AccessGrants with a revision that changes whenever its effective authorization changes. Both `subjectId` and `devicePeerId` are required so a shared peer cannot aggregate rules across identities. It intentionally does not prescribe kernel-route granularity; a NetBird connector can preserve aggregated routing while enforcing these rules as firewall policy.
+`/api/network-map` 会返回某主体和设备专属的静态权限与有效 AccessGrant 并集；其版本会在有效授权发生变化时更新。必须同时提供 `subjectId` 和 `devicePeerId`，以避免共享对等节点跨身份汇聚规则。该接口刻意不规定内核路由粒度；NetBird 连接器可以保留聚合路由，同时将这些规则作为防火墙策略强制执行。
 
-Discovery is intentionally separate from trust: a discovered endpoint has no Asset, Network Resource, policy, or effective access until an administrator imports it through the discovery import API.
+发现结果与信任刻意分离：管理员通过发现导入 API 导入前，已发现端点不具备资产、网络资源、策略或有效访问权限。
 
-`POST /api/access-requests` records a pending Site, Asset, or Service request bound to one subject and managed Device. It validates the requested NetBird-exposable target and TTL, but intentionally does not create an AccessGrant, effective rule, or Network Resource. A Teleport approval remains the authority that creates the grant.
+`POST /api/access-requests` 会记录绑定到一个主体和受管设备的待审批站点、资产或服务申请。它会验证所申请的可通过 NetBird 暴露的目标和 TTL，但刻意不会创建 AccessGrant、有效规则或网络资源。Teleport 审批仍是创建授权的唯一依据。
 
-Set `NETWORK_AUDIT_INGEST_SECRET` before sending normalized data-plane connection reports to `POST /api/network-access-events`; the caller must send it as `x-network-audit-secret`. Fusion recalculates each ALLOW or DENY against the effective policy rather than trusting a caller-provided decision, then records the user, device, Grant, Teleport Request, Router Peer, Asset, service, destination, protocol, and port context when available.
+向 `POST /api/network-access-events` 发送标准化的数据平面连接报告前，请设置 `NETWORK_AUDIT_INGEST_SECRET`；调用方必须通过 `x-network-audit-secret` 发送该值。Fusion 会根据有效策略重新计算每个允许或拒绝结果，而非信任调用方提供的决策；随后会尽可能记录用户、设备、访问授权、Teleport 请求、路由器对等节点、资产、服务、目标地址、协议和端口上下文。
 
-## Teleport Connector
+## Teleport 连接器
 
-Set `TELEPORT_WEBHOOK_SECRET` before sending normalized Teleport request events to `/api/integrations/teleport/access-requests`. The endpoint requires the same value in `x-teleport-webhook-secret` and accepts `approved`, `revoked`, and `expired` event types. An approved event requires `requestId`, `reviewerId`, `subjectId`, `devicePeerId`, scope fields, and `validUntil`; it creates one idempotent Teleport-sourced AccessGrant. The grant is committed before optional NetBird policy synchronization; if that remote synchronization fails, retry the protected policy endpoint rather than replaying a changed authorization.
+向 `/api/integrations/teleport/access-requests` 发送标准化的 Teleport 请求事件前，请设置 `TELEPORT_WEBHOOK_SECRET`。该端点要求通过 `x-teleport-webhook-secret` 发送相同值，并接受 `approved`、`revoked` 和 `expired` 事件类型。已批准事件需要 `requestId`、`reviewerId`、`subjectId`、`devicePeerId`、范围字段和 `validUntil`；它会创建一条幂等的 Teleport 来源 AccessGrant。授权会在可选的 NetBird 策略同步前提交；若远端同步失败，请重试受保护的策略端点，而不是重放已变化的授权。
 
-## NetBird Connector
+## NetBird 连接器
 
-Set `NETBIRD_API_TOKEN`, optionally override `NETBIRD_API_URL`, and set a distinct `NETBIRD_SYNC_SECRET`. Each RouterGroup must include its NetBird Group ID as `netbirdGroupId`; Fusion never guesses it from a routing peer ID and verifies the Group before writing a resource. Call either resource sync endpoint with `x-netbird-sync-secret` equal to `NETBIRD_SYNC_SECRET`. The single-resource endpoint returns one synchronized resource. The bulk endpoint attempts every local Network Resource and returns an `error` beside each resource that could not synchronize. Remote calls happen outside the PostgreSQL transaction; Fusion writes a `network_resource.synced` or `network_resource.sync_failed` audit event only when the desired Resource is unchanged. A stale result returns `409` without changing the newer desired state and should be retried.
+请设置 `NETBIRD_API_TOKEN`，可选地覆盖 `NETBIRD_API_URL`，并设置独立的 `NETBIRD_SYNC_SECRET`。每个 RouterGroup 都必须通过 `netbirdGroupId` 包含其 NetBird 组 ID；Fusion 从不根据路由对等节点 ID 猜测该值，并会在写入资源前验证该组。调用任一资源同步端点时，需让 `x-netbird-sync-secret` 等于 `NETBIRD_SYNC_SECRET`。单资源端点返回一项已同步资源；批量端点会尝试每个本地网络资源，并在无法同步的资源旁返回 `error`。远端调用发生在 PostgreSQL 事务之外；只有目标资源未变化时，Fusion 才会写入 `network_resource.synced` 或 `network_resource.sync_failed` 审计事件。过期结果会返回 `409`，且不会改变较新的目标状态，应当重试。
 
-For L3/L4 enforcement, enroll every managed Device with a pre-existing NetBird Group that contains only that Device peer. Creating an AccessRequest, Static Asset Permission, or AccessGrant requires that exact managed Subject/Device enrollment. Set `NETBIRD_FUSION_POLICY_ID` to an otherwise empty policy dedicated to Fusion, then call `POST /api/network-policies/sync` with the same secret after resource synchronization. Fusion verifies that each Device Group contains exactly its enrolled peer, replaces only rules marked as its own in that dedicated policy, and creates no NetBird Group, Resource, or Policy for an individual Teleport request. The policy uses one unidirectional exact-resource rule per effective Subject/Device/Asset/Service authorization. If access changes during synchronization, Fusion recomputes it once before returning `409`; schedule a retry at the Grant TTL boundary. Set `NETBIRD_POLICY_SYNC_ON_TELEPORT=true` to reconcile that same policy after an approved, revoked, or expired Teleport webhook. NetBird's broad default `All` policy must be removed or disabled separately, or it can override this default-deny boundary.
+对于 L3/L4 强制执行，请为每个受管设备注册一个仅包含该设备对等节点的既有 NetBird 组。创建 AccessRequest、静态资产权限或 AccessGrant 时，都需要精确的受管主体/设备注册。将 `NETBIRD_FUSION_POLICY_ID` 设置为专用于 Fusion 的空策略，然后在资源同步后使用相同密钥调用 `POST /api/network-policies/sync`。Fusion 会验证每个设备组恰好包含其注册对等节点，仅替换该专用策略中标记为自身所有的规则，并且不会为单个 Teleport 请求创建 NetBird 组、资源或策略。该策略会为每个有效主体/设备/资产/服务授权创建一条单向精确资源规则。若同步期间访问权限发生变化，Fusion 会重新计算一次后再返回 `409`；请在授权 TTL 边界安排重试。设置 `NETBIRD_POLICY_SYNC_ON_TELEPORT=true` 后，会在 Teleport Webhook 收到 `approved`、`revoked` 或 `expired` 事件后协调同一策略。必须单独删除或禁用 NetBird 过于宽泛的默认 `All` 策略，否则它可能绕过此默认拒绝边界。
 
-## Verify
+## 验证
 
 ```bash
 npm test

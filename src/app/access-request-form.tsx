@@ -78,7 +78,7 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (selectedDevice === undefined) {
-      setMessage("Enroll a managed Device before submitting an access request.");
+      setMessage("请先注册受管设备，再提交访问申请。");
       return;
     }
 
@@ -109,13 +109,13 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
       });
       const result = (await response.json()) as { error?: string; item?: { id: string } };
       if (!response.ok || result.item === undefined) {
-        throw new Error(result.error ?? "Access request could not be submitted.");
+        throw new Error(result.error ?? "无法提交访问申请。");
       }
 
-      setMessage(`Request ${result.item.id} is pending approval. No network access has been granted.`);
+      setMessage(`申请 ${result.item.id} 正等待审批，尚未授予网络访问权限。`);
       startTransition(() => router.refresh());
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Access request could not be submitted.");
+      setMessage(error instanceof Error ? error.message : "无法提交访问申请。");
     } finally {
       setIsSubmitting(false);
     }
@@ -125,11 +125,11 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
     <form onSubmit={submit}>
       <FormLayout defaultOptionality="required">
         <Selector
-          label="Requested scope"
+          label="申请范围"
           options={[
-            { value: "site", label: "Site" },
-            { value: "asset", label: "Asset" },
-            { value: "service", label: "Service" },
+            { value: "site", label: "站点" },
+            { value: "asset", label: "资产" },
+            { value: "service", label: "服务" },
           ]}
           value={scope}
           onChange={(value) => setScope(value as Scope)}
@@ -137,44 +137,44 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
         />
         {scope === "site" ? (
           <Selector
-            label="Site"
+            label="站点"
             options={sites.map((site) => ({ value: site.id, label: site.name }))}
             value={siteId}
             onChange={setSiteId}
-            placeholder="Choose a Site"
+            placeholder="选择站点"
             presentation="adaptive"
             isDisabled={sites.length === 0}
-            disabledMessage="No Sites are available."
+            disabledMessage="没有可用的站点。"
           />
         ) : (
           <Selector
-            label="Asset"
+            label="资产"
             options={assets.map((asset) => ({ value: asset.id, label: asset.name }))}
             value={assetId}
             onChange={selectAsset}
-            placeholder="Choose an Asset"
+            placeholder="选择资产"
             presentation="adaptive"
             isDisabled={assets.length === 0}
-            disabledMessage="No managed Assets are available."
+            disabledMessage="没有可用的受管资产。"
           />
         )}
         {scope === "service" ? (
           <Selector
-            label="Service"
+            label="服务"
             options={serviceOptions.map((service) => ({
               value: service.id,
               label: `${service.name} ${service.protocol.toUpperCase()}/${service.port}`,
             }))}
             value={serviceId}
             onChange={setServiceId}
-            placeholder="Choose an exposed NetBird service"
+            placeholder="选择已暴露的 NetBird 服务"
             presentation="adaptive"
             isDisabled={serviceOptions.length === 0}
-            disabledMessage="The selected Asset has no NetBird-exposable service."
+            disabledMessage="所选资产没有可通过 NetBird 暴露的服务。"
           />
         ) : null}
         <Selector
-          label="Managed device"
+          label="受管设备"
           options={managedDevices.map((device) => ({
             value: device.id,
             label: `${device.name} (${device.subjectId})`,
@@ -182,28 +182,28 @@ export function AccessRequestForm({ sites, assets, devices }: AccessRequestFormP
           }))}
           value={deviceId}
           onChange={setDeviceId}
-          placeholder="Choose an enrolled Device"
+          placeholder="选择已注册设备"
           presentation="adaptive"
           isDisabled={managedDevices.length === 0}
-          disabledMessage="Enroll a managed Device before requesting access."
-          description="The request is bound to this user, Device peer, and its pre-existing NetBird Group."
+          disabledMessage="请先注册受管设备，再申请访问。"
+          description="该申请会绑定当前用户、设备对等节点和其已有的 NetBird 组。"
         />
-        <TextInput label="Reason" value={reason} onChange={setReason} placeholder="Production investigation" />
+        <TextInput label="申请原因" value={reason} onChange={setReason} placeholder="生产问题排查" />
         <TextInput
-          label="Valid until (ISO 8601)"
+          label="有效期至（ISO 8601）"
           value={validUntil}
           onChange={setValidUntil}
-          description="Approval can only create access until this timestamp."
+          description="审批只能创建截至该时间戳的访问权限。"
         />
         <VStack gap={2}>
           <HStack gap={2} wrap="wrap">
             <Button
-              label="Submit access request"
+              label="提交访问申请"
               type="submit"
               variant="primary"
               isLoading={isSubmitting}
               isDisabled={selectedDevice === undefined}
-              tooltip="Enroll a managed Device before requesting access."
+              tooltip="请先注册受管设备，再申请访问。"
             />
           </HStack>
           {message === undefined ? null : <Text type="supporting">{message}</Text>}

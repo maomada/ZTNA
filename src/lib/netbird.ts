@@ -58,7 +58,7 @@ export class NetBirdConnector {
   static fromEnvironment(): NetBirdConnector {
     const token = process.env.NETBIRD_API_TOKEN;
     if (token === undefined || token === "") {
-      throw new FusionError("NetBird API token is not configured.", 503);
+      throw new FusionError("NetBird API 令牌尚未配置。", 503);
     }
 
     return new NetBirdConnector({ apiUrl: process.env.NETBIRD_API_URL ?? "https://api.netbird.io/api", token });
@@ -66,14 +66,14 @@ export class NetBirdConnector {
 
   async syncResource(resource: NetworkResource, routerGroup: RouterGroup): Promise<string> {
     if (routerGroup.netbirdGroupId === undefined) {
-      throw new FusionError("RouterGroup requires netbirdGroupId before resource synchronization.", 422);
+      throw new FusionError("资源同步前，RouterGroup 必须设置 netbirdGroupId。", 422);
     }
     await this.requireGroup(routerGroup.netbirdGroupId);
 
     const path = `/networks/${encodeURIComponent(resource.networkId)}/resources`;
     const remoteResources = await this.api(path);
     if (!Array.isArray(remoteResources) || !remoteResources.every(isRemoteResource)) {
-      throw new FusionError("NetBird API returned an invalid resource list.", 503);
+      throw new FusionError("NetBird API 返回了无效的资源列表。", 503);
     }
 
     const description = `Fusion resource ${resource.id}`;
@@ -90,7 +90,7 @@ export class NetBirdConnector {
       body: JSON.stringify(body),
     });
     if (!isRemoteResource(remote)) {
-      throw new FusionError("NetBird API returned an invalid resource.", 503);
+      throw new FusionError("NetBird API 返回了无效的资源。", 503);
     }
 
     return remote.id;
@@ -103,7 +103,7 @@ export class NetBirdConnector {
       deviceGroups.set(device.netbirdGroupId, device);
       const resource = store.getNetworkResourceForEndpoint(access.endpointId);
       if (resource.netbirdResourceId === undefined) {
-        throw new FusionError("Network Resource must be synchronized before policy synchronization.", 422);
+        throw new FusionError("策略同步前必须先同步网络资源。", 422);
       }
 
       const description = `Fusion access ${access.id}`;
@@ -112,7 +112,7 @@ export class NetBirdConnector {
         description,
         enabled: true,
         action: "accept",
-        // NetBird network resources only allow source-to-destination policies.
+        // NetBird 网络资源只允许从源到目标的策略。
         bidirectional: false,
         protocol: access.protocol,
         ports: access.ports.map(String),
@@ -126,10 +126,10 @@ export class NetBirdConnector {
     await Promise.all([...deviceGroups.values()].map((device) => this.requireDeviceGroup(device)));
     const remote = await this.api(`/policies/${encodeURIComponent(policyId)}`);
     if (!isRemotePolicy(remote)) {
-      throw new FusionError("NetBird API returned an invalid policy.", 503);
+      throw new FusionError("NetBird API 返回了无效的策略。", 503);
     }
     if (remote.rules.some((rule) => !isFusionPolicyRule(rule))) {
-      throw new FusionError("NetBird Fusion policy must not contain non-Fusion rules.", 422);
+      throw new FusionError("NetBird Fusion 策略不得包含非 Fusion 规则。", 422);
     }
 
     const existingRuleIds = new Map<string, string>(
@@ -152,7 +152,7 @@ export class NetBirdConnector {
       }),
     });
     if (!isRemotePolicy(updated) || updated.id !== policyId) {
-      throw new FusionError("NetBird API returned an invalid policy.", 503);
+      throw new FusionError("NetBird API 返回了无效的策略。", 503);
     }
 
     return { id: updated.id, ruleCount: rules.length };
@@ -169,7 +169,7 @@ export class NetBirdConnector {
       },
     });
     if (!response.ok) {
-      throw new FusionError(`NetBird API request failed with ${response.status}.`, 503);
+      throw new FusionError(`NetBird API 请求失败，状态码为 ${response.status}。`, 503);
     }
 
     return response.json();
@@ -182,7 +182,7 @@ export class NetBirdConnector {
   private async requireDeviceGroup(device: Device): Promise<void> {
     const group = await this.getGroup(device.netbirdGroupId);
     if (group.peers?.length !== 1 || group.peers[0]?.id !== device.peerId) {
-      throw new FusionError("NetBird Device Group must contain exactly its enrolled peer.", 422);
+      throw new FusionError("NetBird 设备组必须且只能包含其已注册的对等节点。", 422);
     }
   }
 
@@ -194,7 +194,7 @@ export class NetBirdConnector {
 
     const group = await this.api(`/groups/${encodeURIComponent(groupId)}`);
     if (!isRemoteGroup(group) || group.id !== groupId) {
-      throw new FusionError("NetBird API returned an invalid Group.", 503);
+      throw new FusionError("NetBird API 返回了无效的组。", 503);
     }
 
     this.groups.set(groupId, group);
@@ -205,25 +205,25 @@ export class NetBirdConnector {
 export function authorizeNetBirdSync(request: Request): void {
   const expected = process.env.NETBIRD_SYNC_SECRET;
   if (expected === undefined || expected === "") {
-    throw new FusionError("NetBird synchronization is not configured.", 503);
+    throw new FusionError("NetBird 同步尚未配置。", 503);
   }
 
   const received = request.headers.get("x-netbird-sync-secret");
   if (received === null) {
-    throw new FusionError("Unauthorized NetBird synchronization.", 401);
+    throw new FusionError("未获授权的 NetBird 同步请求。", 401);
   }
 
   const expectedBuffer = Buffer.from(expected);
   const receivedBuffer = Buffer.from(received);
   if (expectedBuffer.length !== receivedBuffer.length || !timingSafeEqual(expectedBuffer, receivedBuffer)) {
-    throw new FusionError("Unauthorized NetBird synchronization.", 401);
+    throw new FusionError("未获授权的 NetBird 同步请求。", 401);
   }
 }
 
 export function netBirdPolicyIdFromEnvironment(): string {
   const policyId = process.env.NETBIRD_FUSION_POLICY_ID;
   if (policyId === undefined || policyId === "") {
-    throw new FusionError("NetBird Fusion policy ID is not configured.", 503);
+    throw new FusionError("NetBird Fusion 策略 ID 尚未配置。", 503);
   }
 
   return policyId;
@@ -255,7 +255,7 @@ export async function syncAllNetworkResources(
     } catch (error) {
       results.push({
         item: store.getNetworkResource(resource.id),
-        error: error instanceof Error ? error.message : "NetBird synchronization failed.",
+        error: error instanceof Error ? error.message : "NetBird 同步失败。",
       });
     }
   }

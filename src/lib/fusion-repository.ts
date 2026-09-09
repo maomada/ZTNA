@@ -72,18 +72,31 @@ export class FusionRepository {
 
   private async ensureSchema(): Promise<void> {
     if (this.schemaReady === undefined) {
-      this.schemaReady = this.getPool()
-        .query(
-          `CREATE TABLE IF NOT EXISTS fusion_control_plane_state (
-             id boolean PRIMARY KEY DEFAULT true CHECK (id),
-             state jsonb NOT NULL,
-             updated_at timestamptz NOT NULL DEFAULT now()
-           )`,
-        )
-        .then(() => undefined);
+      this.schemaReady = this.createSchema();
     }
 
     await this.schemaReady;
+  }
+
+  private async createSchema(): Promise<void> {
+    const client = await this.getPool().connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT pg_advisory_xact_lock(hashtext('fusion_control_plane_state_schema'))");
+      await client.query(
+        `CREATE TABLE IF NOT EXISTS fusion_control_plane_state (
+           id boolean PRIMARY KEY DEFAULT true CHECK (id),
+           state jsonb NOT NULL,
+           updated_at timestamptz NOT NULL DEFAULT now()
+         )`,
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async loadState(client: Pool | PoolClient = this.getPool(), lock = false): Promise<unknown> {
@@ -97,12 +110,12 @@ export class FusionRepository {
     );
     const state = result.rows[0]?.state;
     if (state === undefined) {
-      throw new Error("Fusion control-plane state could not be initialized.");
+      throw new Error("无法初始化 Fusion 控制平面状态。");
     }
 
     return state;
   }
 }
 
-// ponytail: a locked JSONB snapshot preserves the existing domain model; normalize state and add an outbox when control-plane data or write throughput grows.
+// ponytail: 锁定的 JSONB 快照可复用现有领域模型；当控制面数据量或写入吞吐增长时，再规范化状态并添加 outbox。
 export const fusionRepository = new FusionRepository();

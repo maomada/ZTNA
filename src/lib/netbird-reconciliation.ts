@@ -47,7 +47,7 @@ export async function syncPersistedNetworkResource(
     return repository.mutate((store) => {
       const current = store.getNetworkResource(resourceId);
       if (!hasSameResourceConfiguration(current, plan.resource)) {
-        throw new FusionError("Network Resource changed during synchronization. Retry the synchronization.", 409);
+        throw new FusionError("网络资源在同步期间已更改。请重试同步。", 409);
       }
 
       return store.markNetworkResourceSynced(resourceId, netbirdResourceId);
@@ -86,7 +86,7 @@ export async function syncAllPersistedNetworkResources(
           return resource;
         }
       });
-      results.push({ item, error: error instanceof Error ? error.message : "NetBird synchronization failed." });
+      results.push({ item, error: error instanceof Error ? error.message : "NetBird 同步失败。" });
     }
   }
 
@@ -123,7 +123,7 @@ export async function syncPersistedNetBirdPolicy(
     }
   }
 
-  throw new FusionError("Effective access changed during NetBird policy synchronization. Retry the synchronization.", 409);
+  throw new FusionError("有效访问权限在 NetBird 策略同步期间已更改。请重试同步。", 409);
 }
 
 export async function syncPersistedNetBirdPolicyAfterTeleport(
